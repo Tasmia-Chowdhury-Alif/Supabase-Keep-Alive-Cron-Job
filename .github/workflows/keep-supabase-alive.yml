@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -19,46 +19,65 @@ jobs:
           python-version: '3.11'
 
       - name: Install PostgreSQL driver
-        run: pip install psycopg2-binary
+        run: pip install "psycopg[binary]"
 
-      - name: Ping All Supabase Databases
+      - name: Ping All Supabase Databases (Multiple Times)
         env:
-          DB1_URL: ${{ secrets.BOOKPILOT_URL }}
-          DB2_URL: ${{ secrets.DOCERA_DB_URL }}
-          DB3_URL: ${{ secrets.DRIVERSAFETY_DB_URL }}
-          DB4_URL: ${{ secrets.GREENHARVEST_DB_URL }}
+          BOOKPILOT_URL: ${{ secrets.BOOKPILOT_URL }}
+          DOCERA_DB_URL: ${{ secrets.DOCERA_DB_URL }}
+          DRIVERSAFETY_DB_URL: ${{ secrets.DRIVERSAFETY_DB_URL }}
+          GREENHARVEST_DB_URL: ${{ secrets.GREENHARVEST_DB_URL }}
           # DB5_URL: ${{ secrets.DB5_URL }}
         run: |
           python << 'EOF'
           import os
-          import psycopg2
+          import psycopg
           from datetime import datetime
+          import time
+
+          # ================== CONFIGURATION ==================
+          PINGS_PER_DB = 7          # Change this number if you want more/less
+          DELAY_BETWEEN_PINGS = 3   # seconds between pings (recommended 2-5)
+          # ==================================================
 
           dbs = [
-              ("Project 1", os.getenv('DB1_URL')),
-              ("Project 2", os.getenv('DB2_URL')),
-              ("Project 3", os.getenv('DB3_URL')),
-              ("Project 4", os.getenv('DB4_URL')),
+              ("Bookpilot", os.getenv('BOOKPILOT_URL')),
+              ("Docera", os.getenv('DOCERA_DB_URL')),
+              ("Driver Safety", os.getenv('DRIVERSAFETY_DB_URL')),
+              ("Green Harvest", os.getenv('GREENHARVEST_DB_URL')),
               # ("Project 5", os.getenv('DB5_URL')),
           ]
 
-          print(f"🚀 Keep-alive started at {datetime.utcnow()} UTC\n")
+          print(f"🚀 Keep-alive started at {datetime.utcnow()} UTC")
+          print(f"📊 Will perform {PINGS_PER_DB} pings per database (with {DELAY_BETWEEN_PINGS}s delay)\n")
 
           for name, db_url in dbs:
               if not db_url:
                   print(f"⚠️  {name}: No URL provided - skipped")
                   continue
               
-              try:
-                  conn = psycopg2.connect(db_url, connect_timeout=10)
-                  cur = conn.cursor()
-                  cur.execute("SELECT 1;")
-                  cur.fetchone()
-                  cur.close()
-                  conn.close()
-                  print(f"✅ {name}: Success")
-              except Exception as e:
-                  print(f"❌ {name}: Failed - {str(e)[:100]}")
-          
-          print("\n🎉 All done!")
+              print(f"🔄 Processing {name}...")
+              success_count = 0
+              
+              for i in range(1, PINGS_PER_DB + 1):
+                  try:
+                      conn = psycopg.connect(db_url, connect_timeout=10)
+                      cur = conn.cursor()
+                      cur.execute("SELECT 1;")
+                      cur.fetchone()
+                      cur.close()
+                      conn.close()
+                      
+                      success_count += 1
+                      print(f"   ✅ Ping {i}/{PINGS_PER_DB}: Success")
+                      
+                  except Exception as e:
+                      print(f"   ❌ Ping {i}/{PINGS_PER_DB}: Failed - {str(e)[:100]}")
+                  
+                  if i < PINGS_PER_DB:
+                      time.sleep(DELAY_BETWEEN_PINGS)  # Small delay between pings
+              
+              print(f"✅ {name} completed - {success_count}/{PINGS_PER_DB} successful pings\n")
+
+          print(f"🎉 All databases processed at {datetime.utcnow()} UTC")
           EOF
