@@ -23,7 +23,7 @@ jobs:
 
       - name: Ping All Supabase Databases (Multiple Times)
         env:
-          BOOKPILOT_URL: ${{ secrets.BOOKPILOT_URL }}
+          BOOKPILOT_DB_URL: ${{ secrets.BOOKPILOT_DB_URL }}
           DOCERA_DB_URL: ${{ secrets.DOCERA_DB_URL }}
           DRIVERSAFETY_DB_URL: ${{ secrets.DRIVERSAFETY_DB_URL }}
           GREENHARVEST_DB_URL: ${{ secrets.GREENHARVEST_DB_URL }}
@@ -41,10 +41,10 @@ jobs:
           # ==================================================
 
           dbs = [
-              ("Bookpilot", os.getenv('BOOKPILOT_URL')),
-              ("Docera", os.getenv('DOCERA_DB_URL')),
-              ("Driver Safety", os.getenv('DRIVERSAFETY_DB_URL')),
-              ("Green Harvest", os.getenv('GREENHARVEST_DB_URL')),
+              ("Bookpilot DB", os.getenv('BOOKPILOT_DB_URL')),
+              ("Docera DB", os.getenv('DOCERA_DB_URL')),
+              ("Driver Safety DB", os.getenv('DRIVERSAFETY_DB_URL')),
+              ("Green Harvest DB", os.getenv('GREENHARVEST_DB_URL')),
               # ("Project 5", os.getenv('DB5_URL')),
           ]
 
