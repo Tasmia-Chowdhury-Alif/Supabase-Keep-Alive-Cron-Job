@@ -1,0 +1,64 @@
+name: Keep Supabase Projects Alive
+
+on:
+  schedule:
+    - cron: '30 3 * * 2,4,6'   # Tue, Thu, Sat at 03:30 UTC (9:30 AM BDT)
+  workflow_dispatch:           # Allows manual trigger from GitHub
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PostgreSQL driver
+        run: pip install psycopg2-binary
+
+      - name: Ping All Supabase Databases
+        env:
+          DB1_URL: ${{ secrets.BOOKPILOT_URL }}
+          DB2_URL: ${{ secrets.DOCERA_DB_URL }}
+          DB3_URL: ${{ secrets.DRIVERSAFETY_DB_URL }}
+          DB4_URL: ${{ secrets.GREENHARVEST_DB_URL }}
+          # DB5_URL: ${{ secrets.DB5_URL }}
+        run: |
+          python << 'EOF'
+          import os
+          import psycopg2
+          from datetime import datetime
+
+          dbs = [
+              ("Project 1", os.getenv('DB1_URL')),
+              ("Project 2", os.getenv('DB2_URL')),
+              ("Project 3", os.getenv('DB3_URL')),
+              ("Project 4", os.getenv('DB4_URL')),
+              # ("Project 5", os.getenv('DB5_URL')),
+          ]
+
+          print(f"🚀 Keep-alive started at {datetime.utcnow()} UTC\n")
+
+          for name, db_url in dbs:
+              if not db_url:
+                  print(f"⚠️  {name}: No URL provided - skipped")
+                  continue
+              
+              try:
+                  conn = psycopg2.connect(db_url, connect_timeout=10)
+                  cur = conn.cursor()
+                  cur.execute("SELECT 1;")
+                  cur.fetchone()
+                  cur.close()
+                  conn.close()
+                  print(f"✅ {name}: Success")
+              except Exception as e:
+                  print(f"❌ {name}: Failed - {str(e)[:100]}")
+          
+          print("\n🎉 All done!")
+          EOF
